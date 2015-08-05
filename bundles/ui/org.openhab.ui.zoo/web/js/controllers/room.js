@@ -35,9 +35,9 @@ angular.module('ZooLib.controllers.room', []).controller('RoomController', funct
   }
 
   this.applyScene = function(items){
-     console.log('Room: ',this.rooms);
+
     var rooms = this.rooms;
-    console.log('Items: ',items);
+    console.log(items);
     items.forEach(function(value, key,items){
       //console.log('value',value);
       //console.log('key',key);
@@ -47,18 +47,52 @@ angular.module('ZooLib.controllers.room', []).controller('RoomController', funct
       itemService.sendCommand({itemName: value.name},value.state);
     });
     
-  } 
+  }
+  this.deleteScene = function(sceneName){
+
+    itemRepository.deleteScene(sceneName);
+    for (var i=0;i<this.scenes.length;i++){
+      if (this.scenes[i].name == sceneName){
+        this.scenes.splice(i,1);
+      }
+    }
+  
+  }
 
   this.allItems={};
   this.newScene = {};
 
   this.saveNewScene = function(closeCallback) {
-    var items;
-    items = this.rooms[$state.params.room].members;
-    console.log(this.rooms);
-    if (this.scenes[this.newScene.name]) {
-      $log.error("Scene " + this.newScene.name + " already exists.");
-      return;
+    var items=[];
+
+    // process scene name to valid input
+    this.newScene.name = this.newScene.name.trim().toUpperCase().replace(/\s{1,}/g, "_");
+    for (var i=0;i<this.scenes.length;i++){
+      if (this.scenes[i].name == this.newScene.name){
+        $scope.sceneError = "Scene " + this.newScene.name + " already exists.";
+        //$log.error("Scene " + this.newScene.name + " already exists.");
+        return;
+      }
+    }
+    // check the room
+    if ($state.params.room !='all'){
+      items = this.rooms[$state.params.room].members;
+    }else{ // all room
+      var oneRoomActivate = false;
+      $scope.tempRooms = this.rooms
+      angular.forEach($scope.tempRooms, function(room, roomName){
+        // if 
+        if (room.display){
+          oneRoomActivate = true;
+          items= items.concat(room.members);
+        }
+      });
+      if (!oneRoomActivate){
+        $scope.sceneError = "No room is activated for this scene";
+        return
+      }else{
+         $scope.sceneError = '';
+      }
     }
     $log.debug("Saving scene for items:", items);
     return itemRepository.createNewScene(this.newScene.name, items).then((function(_this) {
@@ -66,12 +100,15 @@ angular.module('ZooLib.controllers.room', []).controller('RoomController', funct
         console.log(_this);
         _this.scenes.push({
           name: _this.newScene.name,
-          items: angular.copy(items)
+          data: angular.copy(items)
         });
         _this.newScene = angular.copy(_this.newSceneDefault);
         return closeCallback();
       };
     })(this));
+
+
+    
   };
   this.refreshItems = function(force) {
     $log.debug('State params 1',$state.params);
@@ -83,7 +120,7 @@ angular.module('ZooLib.controllers.room', []).controller('RoomController', funct
       return function(rooms) {
         rooms['all'] = {'name':'all','label':'All','members':[]};
         $scope.thisRoom = rooms[$state.params.room];
-            
+        $log.debug('This inside after getting rooms',rooms);
    
         _this.rooms = $filter('orderBy')(rooms, 'label');
         
@@ -91,8 +128,8 @@ angular.module('ZooLib.controllers.room', []).controller('RoomController', funct
       };
     })(this));
     itemRepository.getScenes().then((function(_this) {
-      $log.debug('_this inside defered',_this);
-      $log.debug('this inside defered',this);
+     
+      $log.debug('this inside defered,getting scenes',_this);
 
       return function(scenes) {
 

@@ -7,40 +7,42 @@
       <!-- Scenes in that room -->
       <li><a ui-sref-active="selected" ui-sref="rooms.scenes({room:$stateParams.room,scenes:'scenes'})">Scenes <small>({{ctrl.scenes.length}})</small></a></li>
 
-      <!-- All devices, regardeless of the room: -->
-      <li><a ui-sref-active="selected" ui-sref="rooms.room({all: true})">All <small>({{ctrl.items.length}})</small></a></li>
+      
     </ul>
   </nav>
-  
+  <!-- All the rooms-->
   <ul class="cd-tabs-content" style="height: auto">
     <li class="selected">
 
       <div class="line-list" ng-if="$stateParams.room=='all'">
         <ul class="row" ng-repeat="room in ctrl.rooms" ng-if="room.label!='All'">
-          <div class="radio-block-wrap">
-            <h4 class="up-case no-margin">{{room.label}}</h4>
+
+          <div class="radio-block-wrap" >
+            <i class="fa fa-home" style="font-size: 2.5em"></i> 
+            <h3 class="up-case no-margin">
+
+              <strong>{{room.label}}</strong></h3>
             <label class="master-switch switch-small col-lg-3 col-md-3" for="switch-item-{{room.name}}">
               <input id="switch-item-{{room.name}}" type="checkbox" ng-model="room.display" ng-true-value="true" ng-false-value="false">
               <span class="switch col-lg-3 col-md-3"></span>
             </label>
           </div>
-        </ul>
-      
-        <div class="row" ng-repeat="room in ctrl.rooms" ng-if="room.label!='All'">
+          <br><hr><br>
+
           <ul class="line-list" ng-show="room.display" >
             <li ng-repeat="item in room.members" ng-switch="item.type">
-              <h3><small>{{room.label}}</small></h3>
+              <!--<h3><small>{{room.label}}</small></h3>-->
               <dimmer-item ng-switch-when="DimmerItem" item="item"></dimmer-item>
               <switch-item ng-switch-when="SwitchItem" item="item"></switch-item>
               <div ng-switch-default></div>
             </li>
           </ul>
 
-        </div>
-      
+        </ul>
+      <br>
       </div>
-
-
+    
+       <!-- Single room-->
       <div class="large-margin" ng-if="$stateParams.room!='all'">
         <h3>Master switch</h3>
         <master-switch item="ctrl.rooms[$stateParams.room]"></master-switch>
@@ -69,6 +71,9 @@
             <p class="small-margin"><strong>Scene name</strong></p>
             <input type="text" class="field" name="name" ng-model="ctrl.newScene.name" required>
           </label>
+          <div style='color:red' ng-if="sceneError!=''">
+            {{sceneError}}
+          </div>
         </div>
         </form>
 

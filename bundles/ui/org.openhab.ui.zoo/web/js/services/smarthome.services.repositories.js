@@ -36,6 +36,7 @@ angular.module('SmartHome.services.repositories', ['SmartHome.services.datacache
     };
 
     ItemRepository.prototype.getRooms = function() {
+  
       var defered;
       defered = $q.defer();
       itemService.getByName({
@@ -44,7 +45,7 @@ angular.module('SmartHome.services.repositories', ['SmartHome.services.datacache
         return function(data) {
           var result;
           result = {};
-          console.log('Data in service',data);
+        
           data.members.forEach(function(member) {
             return result[member.name] = member;
           });
@@ -61,17 +62,29 @@ angular.module('SmartHome.services.repositories', ['SmartHome.services.datacache
       itemService.getByTag({
         tags: GROUP_SCENES
       }, function(data) {
-        //console.log('data after get scene',data);
+        
         var scenes;
+       
         scenes = data.map(function(scene) {
+         
           //console.log('Scene: ',scene);
-          scene = JSON.parse(scene.state);
-          var sceneData;
-          sceneData = scene.state === 'Uninitialized' ? {} : JSON.parse(scene.state);
+          //scene = JSON.parse(scene.state);
+         
+          var sceneData,sceneError;
+          if ((scene.label == 'NULL') || (scene.label == undefined)){
+            sceneData = {};
+            sceneError =true;
+          }else{
+            sceneData = JSON.parse(scene.label);;
+            sceneError = false;
+          }
+
           return {
-            name: scene.itemName,
-            data: sceneData
+            name: scene.name,
+            data: sceneData,
+            error: sceneError
           };
+  
         });
         return defered.resolve(scenes);
       }, function(err) {
@@ -96,6 +109,39 @@ angular.module('SmartHome.services.repositories', ['SmartHome.services.datacache
       });
       return defered.promise;
     };
+    
+    ItemRepository.prototype.deleteScene = function(sceneName){
+      var defered, fnSuccessDeleteScene,fnError;
+      defered = $q.defer();
+
+      fnSuccessDeleteScene = function(){
+        console.log('Success deleting '+sceneName+' from backend');
+        return defered.resolve();
+      }
+      fnError = function(err){
+        console.log(err);
+        return defered.reject();
+      }
+      console.log('getting scene from backend b4 delete');
+      itemService.getByName({itemName:sceneName} // get item to make sure it's exist and it's a scene
+        ,function(data){
+    
+          if (data.category == 'scenes'){// makesure it's a scene
+            itemService.remove({
+              itemName:sceneName
+            },fnSuccessDeleteScene,fnError);
+          }else{ // not a scene ??
+            console.log('error occurs: item with same name as the scene');
+            return defered.reject();
+          } 
+        },function(err){
+          if (err.status === 404){
+            console.log('This item is not found in the database');
+          }
+          return defered.reject();
+        })
+      return defered.promise;
+    }
 
     ItemRepository.prototype.createNewScene = function(name, items) {
       //console.log('In create new scene');
@@ -107,23 +153,27 @@ angular.module('SmartHome.services.repositories', ['SmartHome.services.datacache
           state: item.state
         };
       });
+      console.log('Scene data :',sceneData);
       fnError = function(err) {
          console.log('err putting scene in the backend',err);
         return defered.reject(err);
       };
       fnSuccessItemCreate = function() {
         console.log('Success putting scene in the backend');
-        return itemService.updateState({
-          itemName: name,
-          state: JSON.stringify(sceneData)
-        }, defered.resolve, fnError);
+        console.log('Scene data in create item:',sceneData);
+        return defered.resolve();
       };
+
+      
+
       itemService.create({
         itemName: name,
+        label:JSON.stringify(sceneData),
         type: 'StringItem',
         category: 'scenes',
         tags: [GROUP_SCENES],
         groupNames: [GROUP_SCENES]
+       
       }, fnSuccessItemCreate, fnError);
       return defered.promise;
     };
